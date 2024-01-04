@@ -1,0 +1,81 @@
+use master 
+go 
+/*************************************************************************************/
+/* Use this script to create a mail profile and a DB Mail account named DBA_Mail */
+/*  ---make sure to update the @display_name value for this server below             */
+/*************************************************************************************/
+
+
+ 
+--enable the DB Mail feature if it is not already enabled
+use master 
+go 
+sp_configure 'show advanced options',1 
+go 
+reconfigure with override 
+go 
+sp_configure 'Database Mail XPs',1 
+--go 
+--sp_configure 'SQL Mail XPs',0 
+go 
+reconfigure 
+go 
+
+
+
+-------------------------------------------------------------------------------------------------- 
+-- BEGIN Mail Settings DBA_Mail 
+-------------------------------------------------------------------------------------------------- 
+IF NOT EXISTS(SELECT * FROM msdb.dbo.sysmail_profile WHERE  name = 'DBA_Mail')  
+  BEGIN 
+    --CREATE Profile [DBA_Mail] 
+    EXECUTE msdb.dbo.sysmail_add_profile_sp 
+      @profile_name = 'DBA_Mail', 
+      @description  = ''; 
+  END --IF EXISTS profile 
+   
+  IF NOT EXISTS(SELECT * FROM msdb.dbo.sysmail_account WHERE  name = 'DBA_Mail') 
+  BEGIN 
+    --CREATE DB Mail Account [DBA_Mail] 
+    EXECUTE msdb.dbo.sysmail_add_account_sp 
+    @account_name            = 'DBA_Mail', 
+    @email_address           = 'replied mailid',                      --'NoReply@xxxxx.com', 
+    @display_name            = 'ServerName',                              --'ServerNameHere', 
+    @replyto_address         = 'replied mailid',                      --'NoReply@xxxxx.com', 
+    @description             = 'DBA_Mail', 
+    @mailserver_name         = 'serverMail',   --'mail.XXXXX.com', 
+    @mailserver_type         = 'SMTP', 
+    @port                    = '25', 
+    @username                =  NULL , 
+    @password                =  NULL ,  
+    @use_default_credentials =  0 , 
+    @enable_ssl              =  0 ; 
+  END --IF EXISTS  account 
+   
+IF NOT EXISTS(SELECT * 
+              FROM msdb.dbo.sysmail_profileaccount pa 
+                INNER JOIN msdb.dbo.sysmail_profile p ON pa.profile_id = p.profile_id 
+                INNER JOIN msdb.dbo.sysmail_account a ON pa.account_id = a.account_id   
+              WHERE p.name = 'DBA_Mail' 
+                AND a.name = 'DBA_Mail')  
+  BEGIN 
+    -- Associate Account [FLX_DBA_Mail] to Profile [DBA_Mail] 
+    EXECUTE msdb.dbo.sysmail_add_profileaccount_sp 
+      @profile_name = 'DBA_Mail', 
+      @account_name = 'DBA_Mail', 
+      @sequence_number = 1 ; 
+  END  
+
+
+--use this to make DBA_Mail the default profile
+if not exists (select * 
+                 from msdb.dbo.sysmail_principalprofile 
+                where principal_sid= 0x00 
+                  and is_default= 1 )
+  BEGIN
+    EXECUTE msdb.dbo.sysmail_add_principalprofile_sp
+      @profile_name = 'DBA_Mail', 
+      @principal_name = 'public', 
+      @is_default = 1;
+  END
+GO
