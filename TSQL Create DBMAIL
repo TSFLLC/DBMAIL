@@ -59,7 +59,7 @@ IF NOT EXISTS(SELECT *
               WHERE p.name = 'DBA_Mail' 
                 AND a.name = 'DBA_Mail')  
   BEGIN 
-    -- Associate Account [FLX_DBA_Mail] to Profile [DBA_Mail] 
+    -- Associate Account [DBA_Mail] to Profile [DBA_Mail] 
     EXECUTE msdb.dbo.sysmail_add_profileaccount_sp 
       @profile_name = 'DBA_Mail', 
       @account_name = 'DBA_Mail', 
